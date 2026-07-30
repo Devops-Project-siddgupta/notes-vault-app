@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Notes Vault</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+        input, textarea, button { width: 100%; margin-bottom: 1rem; padding: 0.5rem; box-sizing: border-box; }
+        .note-item { border: 1px solid #ccc; padding: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; }
+        .note-item:hover { background-color: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>🔒 Notes Vault</h1>
+    
+    <h3>Add Note</h3>
+    <input type="text" id="title" placeholder="Title">
+    <textarea id="content" placeholder="Content"></textarea>
+    <button onclick="addNote()">Save Note</button>
+
+    <h3>Search & View</h3>
+    <input type="text" id="search" placeholder="Search by title..." onkeyup="searchNotes()">
+    <div id="notes-list"></div>
+    <div id="note-detail" style="border: 2px solid #333; padding: 1rem; display: none;"></div>
+
+    <script>
+        async function fetchNotes() {
+            const res = await fetch('/api/notes');
+            const data = await res.json();
+            renderList(data);
+        }
+
+        async function searchNotes() {
+            const query = document.getElementById('search').value;
+            if (!query) return fetchNotes();
+            const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            renderList(data);
+        }
+
+        function renderList(notes) {
+            const listDiv = document.getElementById('notes-list');
+            listDiv.innerHTML = notes.map(n => 
+                `<div class="note-item" onclick="viewNote(${n.id})">
+                    <strong>${n.title}</strong> - <small>${n.timestamp}</small>
+                </div>`
+            ).join('');
+        }
+
+        async function viewNote(id) {
+            const res = await fetch(`/api/notes/${id}`);
+            const data = await res.json();
+            const detailDiv = document.getElementById('note-detail');
+            detailDiv.style.display = 'block';
+            detailDiv.innerHTML = `<h4>${data.title} (${data.timestamp})</h4><p>${data.content}</p>`;
+        }
+
+        async function addNote() {
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            await fetch('/api/notes', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ title, content })
+            });
+            document.getElementById('title').value = '';
+            document.getElementById('content').value = '';
+            fetchNotes();
+        }
+
+        fetchNotes();
+    </script>
+</body>
+</html>
